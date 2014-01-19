@@ -55,7 +55,7 @@ public class MainUI  implements ActionListener{
         consolePanel.add(logTextArea);
                         
         // video panel
-        JPanel videoPanel = new VideoPanel();
+        VideoPanel videoPanel = new VideoPanel();
         
         // settings panel
         JPanel settingsPanel = new JPanel();
@@ -68,7 +68,10 @@ public class MainUI  implements ActionListener{
         mainFrame.getContentPane().add(pane);
  
         mainFrame.pack();
-        mainFrame.setVisible(true);		
+        mainFrame.setVisible(true);
+        
+        LibraryLoader.loadOpenCV();
+        videoPanel.initImage("test.jpg");
     }
 	
 

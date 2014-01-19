@@ -20,7 +20,7 @@ public class VideoPanel extends JPanel {
 	private static final long serialVersionUID = 5178434061598453625L;
 	private static Logger logger = ConsoleLogger.getLogger(VideoPanel.class.getName());
 	
-	private Image img;
+	private Image img = null;
 	
 	public static BufferedImage matToBufferedImage(Mat matrix) {  
 	     int cols = matrix.cols();  
@@ -52,6 +52,9 @@ public class VideoPanel extends JPanel {
 	   }  	
 	
 	VideoPanel() {
+	}
+	
+	public void initImage(String filename) {
 		CascadeClassifier faceDetector = new CascadeClassifier("haarcascade_frontalface_alt.xml");
         Mat image = Highgui
                 .imread("test.jpg");
@@ -67,9 +70,13 @@ public class VideoPanel extends JPanel {
         }		
 		
         img = matToBufferedImage(image);
+        
+        repaint();
 	}
 	
 	public void paintComponent(Graphics g) {
+		if (img == null)
+			return;
 	    int x = 0;
 	    int y = 0;
 	    g.drawImage(img, x, y, 

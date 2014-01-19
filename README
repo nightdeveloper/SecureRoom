@@ -1,5 +1,6 @@
 Just another home security software. It will use smart webcam video processing, email reports, logging and storing data. 
-Used libraries: opencv.
+Used libraries: opencv. 
+Build dependencies: jdk6+, ant.
 No warranties for correct working, data loses and performance :)
 
 Developing in progress, now it is draft for testing various technics.

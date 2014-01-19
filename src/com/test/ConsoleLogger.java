@@ -13,9 +13,9 @@ public class ConsoleLogger extends Handler {
 	private static ConsoleLogger instance = null;
 	
 	private static ConsoleLogger getInstance() {
-		if (instance == null) {
-			instance = new ConsoleLogger();
-		}
+			if (instance == null) {
+				instance = new ConsoleLogger();
+			}
 		return instance;
 	}
 	
@@ -41,10 +41,12 @@ public class ConsoleLogger extends Handler {
 	public void publish(LogRecord record) {
 		if (textArea == null)
 			return;
-		
-		String line = Calendar.getInstance().getTime().toString();
-		line += " " + record.getMessage();
-		line += "\n";
-		textArea.append(line);
+
+		synchronized(textArea) {
+			String line = Calendar.getInstance().getTime().toString();
+			line += " " + record.getMessage();
+			line += "\n";
+			textArea.append(line);
+		}
 	}
 }

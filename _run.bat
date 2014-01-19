@@ -1,0 +1,1 @@
+java -Xmx400m -cp test.jar;lib\opencv\opencv-248.jar; com.test.Test
