@@ -1,11 +1,17 @@
 package com.test;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.logging.Logger;
 
 import javax.swing.*; 
+
+import com.test.worker.InitializeWorker;
+import com.test.worker.VideoWorker;
 
 public class MainUI  implements ActionListener{
 
@@ -17,13 +23,49 @@ public class MainUI  implements ActionListener{
 	private static int MIN_WINDOW_HEIGHT = 500;
 	
 	private JFrame mainFrame;
+	private VideoPanel videoPanel;
 	
 	MainUI() {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				createAndShowGUI();
+				initialize(); 
 			}
 		});			
+	}
+	
+	private void initialize() {
+		InitializeWorker worker = new InitializeWorker();
+		worker.addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent event) {
+				logger.info("property changed - " + event.getPropertyName() + " - " + event.getNewValue() );
+				switch (event.getPropertyName()) {
+					case InitializeWorker.RESULT:
+						if (InitializeWorker.OK.equals( event.getNewValue() ))
+							startVideo();
+						break;
+					case "progress":
+					case "state":						
+				}
+			}
+		    });
+		worker.execute();
+	}
+	
+	private void startVideo() {
+		VideoWorker worker = new VideoWorker(videoPanel);
+		worker.addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent event) {
+				logger.info("property changed - " + event.getPropertyName() + " - " + event.getNewValue() );
+				switch (event.getPropertyName()) {
+					case "progress":
+					case "state":						
+				}
+			}
+		    });
+		worker.execute();
 	}
 	
     private void createAndShowGUI() {
@@ -49,13 +91,13 @@ public class MainUI  implements ActionListener{
         mainFrame.setJMenuBar(menuBar);
         
         // console panel
-        JPanel consolePanel = new JPanel();
+        JPanel consolePanel = new JPanel(new BorderLayout());
         JTextArea logTextArea = new JTextArea();
         ConsoleLogger.setLogAreal(logTextArea);
-        consolePanel.add(logTextArea);
-                        
+        consolePanel.add(logTextArea, BorderLayout.CENTER);
+        
         // video panel
-        VideoPanel videoPanel = new VideoPanel();
+        videoPanel = new VideoPanel();
         
         // settings panel
         JPanel settingsPanel = new JPanel();
@@ -68,10 +110,7 @@ public class MainUI  implements ActionListener{
         mainFrame.getContentPane().add(pane);
  
         mainFrame.pack();
-        mainFrame.setVisible(true);
-        
-        LibraryLoader.loadOpenCV();
-        videoPanel.initImage("test.jpg");
+        mainFrame.setVisible(true);        
     }
 	
 
