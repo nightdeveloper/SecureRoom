@@ -19,7 +19,7 @@ public class ConsoleLogger extends Handler {
 		return instance;
 	}
 	
-	public static void setLogAreal(JTextArea logTextArea) {
+	public static void setLogArea(JTextArea logTextArea) {
 		textArea = logTextArea;
 	}
 	

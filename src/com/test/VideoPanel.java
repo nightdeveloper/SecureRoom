@@ -54,7 +54,7 @@ public class VideoPanel extends JPanel {
 	VideoPanel() {
 	}
 	
-	public void initImage(String filename) {
+	public void testImage(String filename) {
 		CascadeClassifier faceDetector = new CascadeClassifier("haarcascade_frontalface_alt.xml");
         Mat image = Highgui
                 .imread("test.jpg");
@@ -72,6 +72,11 @@ public class VideoPanel extends JPanel {
         img = matToBufferedImage(image);
         
         repaint();
+	}
+	
+	public void setImage(Mat image) {
+		img = matToBufferedImage(image);
+		repaint();
 	}
 	
 	public void paintComponent(Graphics g) {

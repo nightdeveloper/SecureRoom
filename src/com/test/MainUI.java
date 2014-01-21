@@ -4,12 +4,17 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.logging.Logger;
 
 import javax.swing.*; 
 
+import com.test.worker.DiagnosticWorker;
 import com.test.worker.InitializeWorker;
 import com.test.worker.VideoWorker;
 
@@ -24,6 +29,10 @@ public class MainUI  implements ActionListener{
 	
 	private JFrame mainFrame;
 	private VideoPanel videoPanel;
+    private JTabbedPane pane = new JTabbedPane();
+	
+	private final ArrayList<SwingWorker<Integer, String>> workerList = 
+			new ArrayList<SwingWorker<Integer, String>>();
 	
 	MainUI() {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
@@ -32,40 +41,80 @@ public class MainUI  implements ActionListener{
 				initialize(); 
 			}
 		});			
-	}
+	}	
 	
 	private void initialize() {
-		InitializeWorker worker = new InitializeWorker();
+		final InitializeWorker worker = new InitializeWorker();
 		worker.addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
-				logger.info("property changed - " + event.getPropertyName() + " - " + event.getNewValue() );
+				logger.warning("initialize " + event.getPropertyName() + ": " + event.getNewValue());
 				switch (event.getPropertyName()) {
 					case InitializeWorker.RESULT:
-						if (InitializeWorker.OK.equals( event.getNewValue() ))
+						if (InitializeWorker.OK.equals( event.getNewValue() )) {
 							startVideo();
+						}
 						break;
-					case "progress":
-					case "state":						
+					case "done":
+						workerList.remove(worker);
+						break;
 				}
 			}
 		    });
+		workerList.add(worker);
 		worker.execute();
 	}
 	
 	private void startVideo() {
-		VideoWorker worker = new VideoWorker(videoPanel);
+		final VideoWorker worker = new VideoWorker(videoPanel);
 		worker.addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
-				logger.info("property changed - " + event.getPropertyName() + " - " + event.getNewValue() );
+				logger.warning("video " + event.getPropertyName() + ": " + event.getNewValue());
 				switch (event.getPropertyName()) {
-					case "progress":
-					case "state":						
+					case VideoWorker.VIDEO_WIDTH:
+						mainFrame.setSize((Integer)event.getNewValue() + 
+								(mainFrame.getSize().width - videoPanel.getSize().width), 
+								mainFrame.getSize().height);
+						break;
+					case VideoWorker.VIDEO_HEIGHT:
+						mainFrame.setSize(mainFrame.getSize().width,
+								(Integer)event.getNewValue() + 
+								(mainFrame.getSize().height - videoPanel.getSize().height) 
+								);
+						pane.setSelectedIndex(1);
+						break;
+					case "done":
+						workerList.remove(worker);
+					break;
 				}
 			}
 		    });
+		workerList.add(worker);
 		worker.execute();
+	}
+	
+	private final JProgressBar cpuProgressBar = new JProgressBar();
+	
+	private void startDiagnostic() {
+		final DiagnosticWorker worker = new DiagnosticWorker();
+		worker.addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent event) {
+				if (!DiagnosticWorker.CPU_LOAD.equals(event.getPropertyName()))
+					logger.warning("diagnostic " + event.getPropertyName() + ": " + event.getNewValue());
+				switch (event.getPropertyName()) {
+					case "done":
+						workerList.remove(worker);
+						break;
+					case DiagnosticWorker.CPU_LOAD:
+							cpuProgressBar.setValue(Integer.valueOf(event.getNewValue().toString()));
+						break;
+				}
+			}
+		    });
+		workerList.add(worker);
+		worker.execute();		
 	}
 	
     private void createAndShowGUI() {
@@ -73,7 +122,25 @@ public class MainUI  implements ActionListener{
         mainFrame = new JFrame("MainFrame");
         mainFrame.setMinimumSize(new Dimension(
         		MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));
-        mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mainFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        mainFrame.addWindowListener(new WindowListener() {
+    		public void windowActivated(WindowEvent arg0) {}
+    		public void windowClosed(WindowEvent arg0) {}
+    		public void windowClosing(WindowEvent arg0) {
+    	        ConsoleLogger.setLogArea(null);
+    	        
+    			Iterator<SwingWorker<Integer,String>> it = workerList.iterator();
+    			while(it.hasNext()) {
+    				SwingWorker<Integer, String> sw = it.next();
+    				sw.cancel(true);
+    			}
+    		}
+    		public void windowDeactivated(WindowEvent arg0) {}
+    		public void windowDeiconified(WindowEvent arg0) {}
+    		public void windowIconified(WindowEvent arg0) {}
+    		public void windowOpened(WindowEvent arg0) {}
+        }
+        );
         
         // menu 
         JMenuBar menuBar = new JMenuBar();
@@ -93,7 +160,7 @@ public class MainUI  implements ActionListener{
         // console panel
         JPanel consolePanel = new JPanel(new BorderLayout());
         JTextArea logTextArea = new JTextArea();
-        ConsoleLogger.setLogAreal(logTextArea);
+        ConsoleLogger.setLogArea(logTextArea);
         consolePanel.add(logTextArea, BorderLayout.CENTER);
         
         // video panel
@@ -101,13 +168,20 @@ public class MainUI  implements ActionListener{
         
         // settings panel
         JPanel settingsPanel = new JPanel();
-        
+                
         // tab pane
-        JTabbedPane pane = new JTabbedPane();
+        pane = new JTabbedPane();
         pane.addTab("Console", consolePanel);
         pane.addTab("Video", videoPanel);
         pane.addTab("Settings", settingsPanel);
-        mainFrame.getContentPane().add(pane);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.add(pane, BorderLayout.CENTER);
+        mainPanel.add(cpuProgressBar, BorderLayout.PAGE_END);
+        
+        mainFrame.getContentPane().add(mainPanel);
+        
+        startDiagnostic();
  
         mainFrame.pack();
         mainFrame.setVisible(true);        
