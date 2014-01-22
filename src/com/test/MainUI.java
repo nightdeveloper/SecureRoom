@@ -73,15 +73,16 @@ public class MainUI  implements ActionListener{
 				logger.warning("video " + event.getPropertyName() + ": " + event.getNewValue());
 				switch (event.getPropertyName()) {
 					case VideoWorker.VIDEO_WIDTH:
-						mainFrame.setSize((Integer)event.getNewValue() + 
-								(mainFrame.getSize().width - videoPanel.getSize().width), 
-								mainFrame.getSize().height);
+						int newWidth = (Integer)event.getNewValue()*2 + 
+								(mainFrame.getSize().width - videoPanel.getSize().width);
+						logger.warning("new width = " + newWidth);
+						mainFrame.setSize(newWidth, mainFrame.getSize().height);
 						break;
 					case VideoWorker.VIDEO_HEIGHT:
-						mainFrame.setSize(mainFrame.getSize().width,
-								(Integer)event.getNewValue() + 
-								(mainFrame.getSize().height - videoPanel.getSize().height) 
-								);
+						int newHeight = (Integer)event.getNewValue() + 
+								(mainFrame.getSize().height - videoPanel.getSize().height); 
+						logger.warning("new width = " + newHeight);
+						//mainFrame.setSize(mainFrame.getSize().width, newHeight);
 						pane.setSelectedIndex(1);
 						break;
 					case "done":

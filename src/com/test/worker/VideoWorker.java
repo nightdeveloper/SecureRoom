@@ -8,6 +8,7 @@ import org.opencv.core.Mat;
 import org.opencv.highgui.VideoCapture;
 
 import com.test.ConsoleLogger;
+import com.test.MotionDetector;
 import com.test.VideoPanel;
 
 
@@ -24,15 +25,16 @@ public class VideoWorker extends SwingWorker<Integer, String> {
 	public VideoWorker(VideoPanel videoPanel) {
 		panel = videoPanel;
 	}
-	
+		
 	@Override
 	protected Integer doInBackground() throws Exception {
 		logger.info("video worker started");
 		
-		VideoCapture camera = new VideoCapture(0);
+		//VideoCapture camera = new VideoCapture(0);
+		VideoCapture camera = new VideoCapture("test2.mp4");
 		
 		try {
-			if (!camera.open(0) || !camera.isOpened()) {
+			if (!camera.open("test2.mp4")) {
 				logger.info("can not find any camera");
 				firePropertyChange(RESULT, "", ERROR);
 				return null;
@@ -43,10 +45,11 @@ public class VideoWorker extends SwingWorker<Integer, String> {
 			firePropertyChange(VIDEO_WIDTH, "", frame.width());
 			firePropertyChange(VIDEO_HEIGHT, "", frame.height());			
 			
+			MotionDetector detector = new MotionDetector(frame.width(), frame.height());
 			while(!isCancelled()) {
 				camera.read(frame);
-				panel.setImage(frame);
-				Thread.sleep(1000/30);
+				detector.processFrame(frame);
+				panel.setImage(frame, detector.getCurrentFrame());
 			}
 			
 			logger.info("cancelled");

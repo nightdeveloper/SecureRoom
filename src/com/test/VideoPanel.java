@@ -2,7 +2,6 @@ package com.test;
 
 import java.awt.Graphics;
 import java.awt.Image;
-import java.awt.image.BufferedImage;
 import java.util.logging.Logger;
 
 import javax.swing.JPanel;
@@ -16,40 +15,14 @@ import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
 import org.opencv.objdetect.CascadeClassifier;
 
+import com.test.util.VideoUtil;
+
 public class VideoPanel extends JPanel {
 	private static final long serialVersionUID = 5178434061598453625L;
 	private static Logger logger = ConsoleLogger.getLogger(VideoPanel.class.getName());
 	
 	private Image img = null;
-	
-	public static BufferedImage matToBufferedImage(Mat matrix) {  
-	     int cols = matrix.cols();  
-	     int rows = matrix.rows();  
-	     int elemSize = (int)matrix.elemSize();  
-	     byte[] data = new byte[cols * rows * elemSize];  
-	     int type;  
-	     matrix.get(0, 0, data);  
-	     switch (matrix.channels()) {  
-	       case 1:  
-	         type = BufferedImage.TYPE_BYTE_GRAY;  
-	         break;  
-	       case 3:  
-	         type = BufferedImage.TYPE_3BYTE_BGR;  
-	         // bgr to rgb  
-	         byte b;  
-	         for(int i=0; i<data.length; i=i+3) {  
-	           b = data[i];  
-	           data[i] = data[i+2];  
-	           data[i+2] = b;  
-	         }  
-	         break;  
-	       default:  
-	         return null;  
-	     }  
-	     BufferedImage image = new BufferedImage(cols, rows, type);  
-	     image.getRaster().setDataElements(0, 0, cols, rows, data);  
-	     return image;  
-	   }  	
+	private Image debugImg = null;
 	
 	VideoPanel() {
 	}
@@ -69,13 +42,16 @@ public class VideoPanel extends JPanel {
                     new Scalar(0, 255, 0));
         }		
 		
-        img = matToBufferedImage(image);
+        img = VideoUtil.matToImage(image);
         
         repaint();
 	}
 	
-	public void setImage(Mat image) {
-		img = matToBufferedImage(image);
+	public void setImage(Mat image, Mat debugImage) {
+		img = VideoUtil.matToImage(image);
+		if (debugImage != null) {
+			debugImg = VideoUtil.matToImage(debugImage);
+		}
 		repaint();
 	}
 	
@@ -85,8 +61,13 @@ public class VideoPanel extends JPanel {
 	    int x = 0;
 	    int y = 0;
 	    g.drawImage(img, x, y, 
-	    		getWidth(),
+	    		getWidth()/2,
 	    		getHeight(),
 	    		null);
+	    if (debugImg != null)
+		    g.drawImage(debugImg, getWidth()/2+x, y, 
+		    		getWidth()/2,
+		    		getHeight(),
+		    		null);
 	}		
 }
