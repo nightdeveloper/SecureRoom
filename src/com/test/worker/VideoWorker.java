@@ -16,6 +16,7 @@ public class VideoWorker extends SwingWorker<Integer, String> {
 
 	public static final String RESULT = "result";
 	public static final String ERROR = "error";
+	public static final String VIDEO_MOTION = "video_motion";
 	public static final String VIDEO_WIDTH = "video_width";
 	public static final String VIDEO_HEIGHT = "video_height";
 	
@@ -30,11 +31,12 @@ public class VideoWorker extends SwingWorker<Integer, String> {
 	protected Integer doInBackground() throws Exception {
 		logger.info("video worker started");
 		
-		//VideoCapture camera = new VideoCapture(0);
-		VideoCapture camera = new VideoCapture("test2.mp4");
+		VideoCapture camera = new VideoCapture(0);
+		//VideoCapture camera = new VideoCapture("test2.mp4");
 		
 		try {
-			if (!camera.open("test2.mp4")) {
+			//if (!camera.open("test2.mp4")) {
+			if (!camera.open(0)) {
 				logger.info("can not find any camera");
 				firePropertyChange(RESULT, "", ERROR);
 				return null;
@@ -49,6 +51,7 @@ public class VideoWorker extends SwingWorker<Integer, String> {
 			while(!isCancelled()) {
 				camera.read(frame);
 				detector.processFrame(frame);
+				firePropertyChange(VIDEO_MOTION, "", detector.getMotionFactor());			
 				panel.setImage(frame, detector.getCurrentFrame());
 			}
 			

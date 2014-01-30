@@ -65,6 +65,8 @@ public class MainUI  implements ActionListener{
 		worker.execute();
 	}
 	
+	private final JProgressBar motionBar = new JProgressBar();
+	
 	private void startVideo() {
 		final VideoWorker worker = new VideoWorker(videoPanel);
 		worker.addPropertyChangeListener(new PropertyChangeListener() {
@@ -84,6 +86,9 @@ public class MainUI  implements ActionListener{
 						logger.warning("new width = " + newHeight);
 						//mainFrame.setSize(mainFrame.getSize().width, newHeight);
 						pane.setSelectedIndex(1);
+						break;
+					case VideoWorker.VIDEO_MOTION:
+						motionBar.setValue(Integer.valueOf(event.getNewValue().toString()));
 						break;
 					case "done":
 						workerList.remove(worker);
@@ -179,6 +184,7 @@ public class MainUI  implements ActionListener{
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(pane, BorderLayout.CENTER);
         mainPanel.add(cpuProgressBar, BorderLayout.PAGE_END);
+        mainPanel.add(motionBar, BorderLayout.PAGE_START);
         
         mainFrame.getContentPane().add(mainPanel);
         

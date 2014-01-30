@@ -56,6 +56,10 @@ public class MotionDetector {
         return diffExceed >= MOTION_THRESOLD;
     }
    
+    public int getMotionFactor() {
+    	return diffExceed;
+    }
+    
     public void processFrame(Mat mat) {
         initCurrentFrame(mat);
        
@@ -67,12 +71,16 @@ public class MotionDetector {
         calcDiff(isRemoveNoise?noiseThresold:0, MULTIPLIER);
        
         applyNeighbors();
-
+        
+      	shiftFrames();
+     
+      	/*
         if (diffExceed > 5) {
             currentTimeout = WAIT_FRAMES_TIMEOUT;
         } else
             if (currentTimeout-- == 0)
-                shiftFrames();   
+                shiftFrames(); 
+                */  
     }
    
     private void shiftFrames() {
@@ -97,8 +105,8 @@ public class MotionDetector {
             histogram[p]++;
         }
        
-        int noiseThresold = 0;
-        for(int i=0; i<255; i++) {
+        int noiseThresold = 30;
+        for(int i=0; i<30; i++) {
             if (histogram[i] < 2) {
                 noiseThresold = i;
                 break;
@@ -111,7 +119,12 @@ public class MotionDetector {
             diff += histogram[i];
         }
        
-        diffExceed = (int)diff/(width*height);
+        diffExceed = (int)((double)diff/(width*height)*100);
+        
+        diffExceed *= 10;
+        
+        if (diffExceed > 100)
+        	diffExceed = 100;
     }
    
     private void calcDiff(int noiseThresold, int multiplier) {
