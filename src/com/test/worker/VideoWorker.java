@@ -1,5 +1,6 @@
 package com.test.worker;
 
+import java.awt.image.BufferedImage;
 import java.util.logging.Logger;
 
 import javax.swing.SwingWorker;
@@ -10,6 +11,7 @@ import org.opencv.highgui.VideoCapture;
 import com.test.ConsoleLogger;
 import com.test.MotionDetector;
 import com.test.VideoPanel;
+import com.test.util.VideoUtil;
 
 
 public class VideoWorker extends SwingWorker<Integer, String> {
@@ -31,28 +33,44 @@ public class VideoWorker extends SwingWorker<Integer, String> {
 	protected Integer doInBackground() throws Exception {
 		logger.info("video worker started");
 		
-		VideoCapture camera = new VideoCapture(0);
-		//VideoCapture camera = new VideoCapture("test2.mp4");
+		//VideoCapture camera = new VideoCapture(0);
+		VideoCapture camera = new VideoCapture("test3.mp4");
+		
+		BufferedImage image = null, processImage = null;
+		int frameWidth = 0;
+		int frameHeight = 0;
 		
 		try {
-			//if (!camera.open("test2.mp4")) {
-			if (!camera.open(0)) {
+			if (!camera.open("test3.mp4")) {
+			//if (!camera.open(0)) {
 				logger.info("can not find any camera");
 				firePropertyChange(RESULT, "", ERROR);
 				return null;
 			}
 			
-			Mat  frame = new Mat();
+			Mat frame = new Mat();
 			camera.read(frame);
-			firePropertyChange(VIDEO_WIDTH, "", frame.width());
-			firePropertyChange(VIDEO_HEIGHT, "", frame.height());			
+			if (image == null) {
+				frameWidth = frame.width();
+				frameHeight = frame.height();
+				firePropertyChange(VIDEO_WIDTH, "", frameWidth);
+				firePropertyChange(VIDEO_HEIGHT, "", frame.height());
+				image = new BufferedImage(frameWidth, frameHeight, BufferedImage.TYPE_INT_RGB);
+				processImage = new BufferedImage(frameWidth, frameHeight, BufferedImage.TYPE_INT_RGB);
+			}
 			
-			MotionDetector detector = new MotionDetector(frame.width(), frame.height());
+			MotionDetector detector = new MotionDetector(frameWidth, frameHeight);
 			while(!isCancelled()) {
 				camera.read(frame);
 				detector.processFrame(frame);
+				
+				VideoUtil.writeMatToImage(
+						frame, image, frameWidth, frameHeight);
+				VideoUtil.writeMatToImage(
+						detector.getInProcessMatFrame(), processImage, frameWidth, frameHeight);
+				
 				firePropertyChange(VIDEO_MOTION, "", detector.getMotionFactor());			
-				panel.setImage(frame, detector.getCurrentFrame());
+				panel.setImages(image, processImage);
 			}
 			
 			logger.info("cancelled");

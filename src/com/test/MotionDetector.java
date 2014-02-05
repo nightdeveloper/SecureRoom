@@ -1,28 +1,38 @@
 package com.test;
 
+import java.util.Map;
+import java.util.logging.Logger;
+
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
+import com.test.util.VideoUtil;
+
 public class MotionDetector {
 
+	private static Logger logger = ConsoleLogger.getLogger(MotionDetector.class.getName());
+	
     boolean isLastFrameInited = false;
     private double[] lastFrame;
     private double[] currentFrame;
     private double[] inProcessFrame;
+    private double[] objectsFrame;
     private int width;
     private int height;
-   
+    
+    private Mat inProcessMatFrame;
+    
     public MotionDetector(int width, int height) {
         this.width = width;
         this.height = height;
-        lastFrame = new double[height*width];
-        currentFrame = new double[height*width];
-        inProcessFrame = new double[height*width];
+        lastFrame = new double[width*height];
+        currentFrame = new double[width*height];
+        inProcessFrame = new double[width*height];
+        inProcessMatFrame = new Mat(height, width, CvType.CV_8UC1);
+		objectsFrame = new double[width*height];        
     }
    
-    public Mat getCurrentFrame() {
-        Mat mat = new Mat(height, width, CvType.CV_8UC1);
-       
+    public Mat getInProcessMatFrame() {
         double[] data = new double[3];
        
         int pos = 0;
@@ -31,56 +41,64 @@ public class MotionDetector {
                 data[0] = inProcessFrame[pos];
                 data[1] = inProcessFrame[pos];
                 data[2] = inProcessFrame[pos];
-                mat.put(y, x, data);
+                inProcessMatFrame.put(y, x, data);
                 pos++;
             }
         }
        
-        return mat;
+        return inProcessMatFrame;
     }
    
     private final int MULTIPLIER = 10;
-    private final int WAIT_FRAMES_TIMEOUT = 100;
-    private final int MOTION_THRESOLD = 5;
-    private final int NOISE_MULTIPLIER_THRESOLD = 500;
-    private final int NEIGHTBORS_THRESOLD = 300;
+    private final double MOTION_THRESOLD = 0.1;
+   
+    private final int MAX_NOISE_THRESOLD = 30;
+    private final int MIN_SQUARE_THRESOLD = 50;
+    private double diffExceed = 0;
     
-    private boolean isRemoveNoise = false;
-   
-    private int noiseThresold = 5;
-    private int diffExceed = 0;
-   
     private int currentTimeout = 0;
+    private final int WAIT_FRAMES_TIMEOUT = 100;
    
     public boolean isMotion() {
         return diffExceed >= MOTION_THRESOLD;
     }
    
     public int getMotionFactor() {
-    	return diffExceed;
+    	int factor = (int)(diffExceed*10);
+    	if (factor > 100)
+    		factor = 100;
+    	
+    	return factor;
     }
     
     public void processFrame(Mat mat) {
-        initCurrentFrame(mat);
+    	VideoUtil.convertMatToFrameGreyscale(mat, currentFrame);
        
-        if (!isLastFrameInited)
+        if (!isLastFrameInited) {
             shiftFrames();
-   
-        calculateFramesHistogramValues();
-       
-        calcDiff(isRemoveNoise?noiseThresold:0, MULTIPLIER);
-       
-        applyNeighbors();
+        }
+    	VideoUtil.makeDiffFrame(inProcessFrame, currentFrame, lastFrame, width, height);
+        int[] histogram = VideoUtil.calculateHistogram(inProcessFrame, width, height); 
+        int ambientLevel = VideoUtil.calculateNoiseThresold(histogram, MAX_NOISE_THRESOLD, 5);
+        VideoUtil.removeNoiseApplyMultiplier(inProcessFrame, ambientLevel, MULTIPLIER, width, height);
+        VideoUtil.applyNeighborsOperator(inProcessFrame, width, height);
         
-      	shiftFrames();
-     
-      	/*
-        if (diffExceed > 5) {
+        VideoUtil.calculateObjectRanges(inProcessFrame, objectsFrame, width, height, MAX_NOISE_THRESOLD);
+        Map<String, Integer> squares = VideoUtil.calculateSquares(objectsFrame, width, height);
+        VideoUtil.removeLessSquaresFromFrame(objectsFrame, inProcessFrame, width, height, squares, MIN_SQUARE_THRESOLD);
+
+        int diffWeight = VideoUtil.calculateDiffWeight(histogram, ambientLevel);
+        diffExceed = (double)diffWeight / (width*height) * 100;
+        
+        if (isMotion()) {
             currentTimeout = WAIT_FRAMES_TIMEOUT;
         } else
-            if (currentTimeout-- == 0)
-                shiftFrames(); 
-                */  
+            if (currentTimeout-- == 0) {
+                shiftFrames();
+            }
+            else {
+            	logger.info("wating timeout - " + currentTimeout);
+            }
     }
    
     private void shiftFrames() {
@@ -88,76 +106,4 @@ public class MotionDetector {
         isLastFrameInited = true;
     }
    
-    private void applyNeighbors() {
-        for(int i = width+1; i< (width-1)*(height-1); i++) {
-            double neightbors = inProcessFrame[i-width] +
-                    inProcessFrame[i-1] + inProcessFrame[i+1] +
-                    inProcessFrame[i+width];
-            if (neightbors < NEIGHTBORS_THRESOLD)
-                inProcessFrame[i] = 0;
-        }
-    }
-   
-    private void calculateFramesHistogramValues() {
-        int[] histogram = new int[255];
-        for(int i=0; i<width*height; i++) {
-            int p = (int) Math.ceil( Math.abs(currentFrame[i] - lastFrame[i]) );
-            histogram[p]++;
-        }
-       
-        int noiseThresold = 30;
-        for(int i=0; i<30; i++) {
-            if (histogram[i] < 2) {
-                noiseThresold = i;
-                break;
-            }
-        }
-
-        long diff = 0;
-       
-        for(int i=noiseThresold; i<255; i++) {
-            diff += histogram[i];
-        }
-       
-        diffExceed = (int)((double)diff/(width*height)*100);
-        
-        diffExceed *= 10;
-        
-        if (diffExceed > 100)
-        	diffExceed = 100;
-    }
-   
-    private void calcDiff(int noiseThresold, int multiplier) {
-        for(int i=0; i<width*height; i++) {
-            double p = Math.abs(currentFrame[i] - lastFrame[i]);
-           
-            if (p < noiseThresold)
-                p = 0;
-           
-            p *= multiplier;
-           
-            if (p < NOISE_MULTIPLIER_THRESOLD && isRemoveNoise)
-                p = 0;
-           
-            if (p > 255)
-                p = 255;
-           
-            inProcessFrame[i] = p;
-        }
-    }
-   
-    private void initCurrentFrame(Mat mat) {
-        double[] pixel = new double[3];
-       
-        int pos = 0;
-        for(int y=0; y<mat.height(); y++) {
-            for(int x=0; x<mat.width(); x++) {
-                pixel = mat.get(y, x);
-                double greyscale =
-                         pixel[2]*0.299 + pixel[1]*0.587 + pixel[0]*0.114;
-                currentFrame[pos++] = greyscale;
-            }
-        }
-    }
-       
 }

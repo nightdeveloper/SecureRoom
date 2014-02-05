@@ -49,15 +49,15 @@ public class MainUI  implements ActionListener{
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
 				logger.warning("initialize " + event.getPropertyName() + ": " + event.getNewValue());
-				switch (event.getPropertyName()) {
-					case InitializeWorker.RESULT:
-						if (InitializeWorker.OK.equals( event.getNewValue() )) {
-							startVideo();
-						}
-						break;
-					case "done":
-						workerList.remove(worker);
-						break;
+				
+				String eventName = event.getPropertyName();
+				
+				if (InitializeWorker.RESULT.equals(eventName)) {
+					if (InitializeWorker.OK.equals( event.getNewValue() )) {
+						startVideo();
+					}
+				} if ("done".equals(eventName)) {
+					workerList.remove(worker);
 				}
 			}
 		    });
@@ -73,26 +73,27 @@ public class MainUI  implements ActionListener{
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
 				logger.warning("video " + event.getPropertyName() + ": " + event.getNewValue());
-				switch (event.getPropertyName()) {
-					case VideoWorker.VIDEO_WIDTH:
-						int newWidth = (Integer)event.getNewValue()*2 + 
-								(mainFrame.getSize().width - videoPanel.getSize().width);
-						logger.warning("new width = " + newWidth);
-						mainFrame.setSize(newWidth, mainFrame.getSize().height);
-						break;
-					case VideoWorker.VIDEO_HEIGHT:
-						int newHeight = (Integer)event.getNewValue() + 
-								(mainFrame.getSize().height - videoPanel.getSize().height); 
-						logger.warning("new width = " + newHeight);
-						//mainFrame.setSize(mainFrame.getSize().width, newHeight);
-						pane.setSelectedIndex(1);
-						break;
-					case VideoWorker.VIDEO_MOTION:
-						motionBar.setValue(Integer.valueOf(event.getNewValue().toString()));
-						break;
-					case "done":
+				
+				String eventName = event.getPropertyName();
+				
+				if (VideoWorker.VIDEO_WIDTH.equals(eventName)) {
+					int newWidth = (Integer)event.getNewValue()*2 + 
+							(mainFrame.getSize().width - videoPanel.getSize().width);
+					logger.warning("new width = " + newWidth);
+					mainFrame.setSize(newWidth, mainFrame.getSize().height);
+					
+				} else if (VideoWorker.VIDEO_HEIGHT.equals(eventName)) {
+					int newHeight = (Integer)event.getNewValue() + 
+							(mainFrame.getSize().height - videoPanel.getSize().height); 
+					logger.warning("new width = " + newHeight);
+					//mainFrame.setSize(mainFrame.getSize().width, newHeight);
+					pane.setSelectedIndex(1);
+					
+				} else if (VideoWorker.VIDEO_MOTION.equals(eventName)) {
+					motionBar.setValue(Integer.valueOf(event.getNewValue().toString()));
+					
+				} else if ("done".equals(eventName)) {
 						workerList.remove(worker);
-					break;
 				}
 			}
 		    });
@@ -109,13 +110,13 @@ public class MainUI  implements ActionListener{
 			public void propertyChange(PropertyChangeEvent event) {
 				if (!DiagnosticWorker.CPU_LOAD.equals(event.getPropertyName()))
 					logger.warning("diagnostic " + event.getPropertyName() + ": " + event.getNewValue());
-				switch (event.getPropertyName()) {
-					case "done":
-						workerList.remove(worker);
-						break;
-					case DiagnosticWorker.CPU_LOAD:
-							cpuProgressBar.setValue(Integer.valueOf(event.getNewValue().toString()));
-						break;
+				
+				String eventName = event.getPropertyName();
+
+				if ("done".equals(eventName)) {
+					workerList.remove(worker);
+				} else if (DiagnosticWorker.CPU_LOAD.equals(eventName)) {
+					cpuProgressBar.setValue(Integer.valueOf(event.getNewValue().toString()));
 				}
 			}
 		    });
